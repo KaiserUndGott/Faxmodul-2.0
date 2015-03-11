@@ -1,0 +1,16 @@
+#!/bin/bash
+
+# Dieses Skript ist von einem paar Skripte benutzt, um ein X Terminal zu starten
+
+# Wenn "urxvt" und die Font "Terminus" installiert sind, dann benutzen wir die
+# Beiden !
+if (xlsfonts | grep -q Terminus) && (rpm -q rxvt-unicode > /dev/null 2>&1); then
+	urxvt -tn xterm -fn -*-terminus-medium-*-*-*-24-*-*-*-*-*-*-* -tr -sh 25 \
+          -tint DodgerBlue3 +sb -fg gold1 -title "DATA VITAL Betriebssystem" \
+          -e $@
+else
+	xterm -geometry 80x25 -fn 10x20 +sb -tm "erase ^?" \
+          -bg "#101540" -fg white -title "Arztprogramm D A V I D" \
+          -e $@
+fi
+

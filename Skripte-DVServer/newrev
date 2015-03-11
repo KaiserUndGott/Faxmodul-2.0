@@ -1,0 +1,41 @@
+# -*- shell-script -*-
+# source me
+
+# Menue CD / ONLINE
+ende=false
+until [ $ende = true ]
+do
+datum=`date "+%d.%m.%y %H:%M Uhr"`
+echo -n $cls
+echo -n "DATA VITAL$(_space)$DAV_ID$(_space)$datum"
+echo $linie
+echo "
+                       U P D A T E   e i n s p i e l e n
+                       =================================
+
+                       (1) von DVD
+                       (2) von Online-Update
+
+                       (0) Startmen${uuml}
+
+
+
+
+
+
+
+
+
+
+"
+echo -n $linie
+echo -n "${ips}Was soll ich tun? "
+read option
+
+case $option in
+    1) ./newrev.cd;;
+    2) ./newrev.onl;;
+    0) ende=true;;
+esac
+
+done

@@ -1,0 +1,94 @@
+#!/bin/bash
+
+function fatal_error
+{
+    if [ "$GUI" == "GUI" ]; then
+        ./bin/Xdialog                                                                          \
+            --screen-center --title "DATA VITAL - Update"                                      \
+            --msgbox "                                                                 \n$1\n" \
+            0 0
+    else
+        echo -e "\n$1"
+        echo -e "\n\nBeenden mit Return"
+        read trash
+    fi
+}
+
+# Die Konfiguration lesen
+. $DAV_HOME/david.conf
+
+echo -n $cls
+echo -e "              ===== Update-CD einspielen =====\n"
+
+# Ist die Variable DAV_CROM gestetzt ?
+[ -z "$DAV_CDROM" ] && DAV_CDROM=/cdrom
+
+# Graphische Installation ?
+if [ ! "$GUI" ]; then
+    if [ -f bin/Xdialog ]; then
+        ./bin/Xdialog --timeout 2 --screen-center --title "DATA VITAL - Update" --no-buttons --infobox "Das Programm wird aktualisiert" 3  40
+        if [ "$?" == "0" ]; then
+            export GUI=GUI
+        fi
+    fi
+fi
+
+# Alle Instanz beenden
+if ! semdump -n; then
+    MELDUNG="ACHTUNG : Programme beenden\n"
+    MELDUNG="${MELDUNG}Diese Prozedur kann nur korrekt ablaufen, wenn das Arztprogramm\n"
+    MELDUNG="${MELDUNG}an ALLEN Bildschirmen beendet wurde. Das System hat festgestellt,\n"
+    MELDUNG="${MELDUNG}dass noch nicht alle Bildschirme das Arztprogramm verlassen haben!\n\n"
+    MELDUNG="${MELDUNG}Bitte beenden Sie das Arztprogramm an ALLEN Bildschirmen und starten\n"
+    MELDUNG="${MELDUNG}Sie die Einspiel-Prozedur dann erneut."
+
+    fatal_error "${MELDUNG}"
+    exit 1
+fi
+
+# Wir brauchen 2.5 G auf der Festplatte
+FREI=$(($(stat -f --format="%a*%s/1024/1024" $DAV_HOME)))
+if [ $FREI -le 2500 ]; then
+    MELDUNG="Speicherplatz reicht nicht!!\n\n"
+    MELDUNG="${MELDUNG}Bitte setzen Sie sich mit Ihrem Vertriebs-/\n"
+    MELDUNG="${MELDUNG}Servicepartner in Verbindung."
+
+    fatal_error "${MELDUNG}"
+    exit 1
+fi
+
+# Die DVD ist noch nicht eingehaengt ?
+DVD_MOUNT=false
+if [ ! -s $DAV_CDROM/exupdate ]; then
+    DVD_MOUNT=true
+    echo "DVD noch nicht eingehängt, ich probiere sie zu finden, ..."
+    mount $DAV_CDROM/
+    sleep 7
+fi
+
+# Jetzt das muss funktionieren, sonst => Fehler
+if [ ! -s $DAV_CDROM/exupdate ]; then
+    fatal_error "!DVD nicht erkannt!"
+    exit 1
+fi
+
+# Alles gut, wir spielen das Update ein
+cd $DAV_HOME
+
+# Entfernung den alten exupdate Skripten
+chmod a+rw exupdate* 2>/dev/null
+rm -f exupdate* 2>/dev/null
+
+# Kopie des neuen
+cp $DAV_CDROM/exupdate .
+
+# Installation !
+chmod a+rwx exupdate
+export DAV_CDROM DAV_HOME
+./exupdate
+
+# Aufraeumungsarbeit
+rm -f exupdate*
+if $DVD_MOUNT; then
+    umount $DAV_CDROM/
+fi

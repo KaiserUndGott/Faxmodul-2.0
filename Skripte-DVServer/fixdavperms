@@ -1,0 +1,58 @@
+#!/bin/bash
+
+
+## PRUEFUNG ##
+
+# DAV_HOME
+if [ ! "$DAV_HOME" ]; then
+    echo "Die DAV_HOME Umgebungsvariable ist nicht gesetzt!"
+    echo
+    echo "Beenden mit Return"
+    read trash
+    exit 1
+fi
+
+# Bin ich root ?
+if ! [ "`id -u`" = "0" ]; then
+
+    echo "Geben Sie bitte das \"root\" Passwort ein"
+
+    while true
+    do
+        if su -c "${DAV_HOME}/bin/fixdavperms"; then
+            break
+        fi
+    done
+
+    exit 0
+fi
+
+
+## GO ##
+
+echo "Repariere die Rechte im DAV_HOME Verzeichnis,"
+echo "die Ausführung kann ein paar Minuten dauern..."
+echo
+
+# Allgemein
+chown -R david:users $DAV_HOME
+chmod -R ug+rw $DAV_HOME
+
+# Fix perms fuer die dfue_? Verzeichnissen
+cd $DAV_HOME
+find dfue_? -name "*.cfg" 2>/dev/null | sed 's/\.cfg$//' | xargs chown root:users >/dev/null 2>&1
+find dfue_? -name "*.cfg" 2>/dev/null | sed 's/\.cfg$//' | xargs chmod 4775 >/dev/null 2>&1
+
+# nice, but maybe "commandlist too long"
+#find . -type d -print |egrep -v '^\./\.' |sed 's/\([ ]\)/\\\1/'|xargs chmod a+x
+IFS='
+'
+for d in `find . -type d -print | egrep -v '^\./\.'`
+do
+	chmod a+x "$d"
+done
+
+# Fertig
+echo "Fertig"
+echo "Beenden mit Return"
+read trash

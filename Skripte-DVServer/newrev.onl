@@ -1,0 +1,73 @@
+#!/bin/bash
+
+function fatal_error
+{
+    if [ "$GUI" == "GUI" ]; then
+        ./bin/Xdialog                                                                          \
+            --screen-center --title "DATA VITAL - Update"                                      \
+            --msgbox "                                                                 \n$1\n" \
+            0 0
+    else
+        echo -e "\n$1"
+        echo -e "\n\nBeenden mit Return"
+        read trash
+    fi
+}
+
+# Die Konfiguration lesen
+. $DAV_HOME/david.conf
+
+echo $cls
+echo -e "              ===== Online-Update einspielen =====\n"
+
+# Graphische Installation ?
+if [ ! "$GUI" ]; then
+    if [ -f bin/Xdialog ]; then
+        ./bin/Xdialog --timeout 2 --screen-center --title "DATA VITAL - Update" --no-buttons --infobox "Das Programm wird aktualisiert" 3  40
+        if [ "$?" == "0" ]; then
+            export GUI=GUI
+        fi
+    fi
+fi
+
+# Ist ein Update da ?
+if [ ! -s $DAV_HOME/online-update/aktuell ]; then
+    fatal_error "Kein ONLINE UPDATE vorhanden, bitte vom Server laden!"
+    exit 1
+fi
+
+# Alle Instanz beenden
+if ! semdump -n; then
+    MELDUNG="ACHTUNG : Programme beenden\n"
+    MELDUNG="${MELDUNG}Diese Prozedur kann nur korrekt ablaufen, wenn das Arztprogramm\n"
+    MELDUNG="${MELDUNG}an ALLEN Bildschirmen beendet wurde. Das System hat festgestellt,\n"
+    MELDUNG="${MELDUNG}dass noch nicht alle Bildschirme das Arztprogramm verlassen haben!\n\n"
+    MELDUNG="${MELDUNG}Bitte beenden Sie das Arztprogramm an ALLEN Bildschirmen und starten\n"
+    MELDUNG="${MELDUNG}Sie die Einspiel-Prozedur dann erneut."
+
+    fatal_error "${MELDUNG}"
+    exit 1
+fi
+
+# Wir brauchen 2.5 G auf der Festplatte
+FREI=$(($(stat -f --format="%a*%s/1024/1024" $DAV_HOME)))
+if [ $FREI -le 2500 ]; then
+    MELDUNG="Speicherplatz reicht nicht!!\n\n"
+    MELDUNG="${MELDUNG}Bitte setzen Sie sich mit Ihrem Vertriebs-/\n"
+    MELDUNG="${MELDUNG}Servicepartner in Verbindung."
+
+    fatal_error "${MELDUNG}"
+    exit 1
+fi
+
+# XXX
+rm -rf dvupd.tmp
+mkdir dvupd.tmp
+cd dvupd.tmp
+export DAV_SRC=$PWD
+tar xf ../aktuell
+cp exupdate $DAV_HOME
+cd $DAV_HOME
+./exupdate
+rm -f exupdate
+rm -rf $DAV_HOME/online-update/dvupd.tmp
